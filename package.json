@@ -1,0 +1,22 @@
+{
+  "name": "momocord_mobile",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/main.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.27.0",
+  "dependencies": {
+    "axios": "^1.13.5",
+    "dayjs": "^1.11.19",
+    "hono": "^4.11.9",
+    "puppeteer-core": "^24.37.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "ws": "^8.19.0"
+  }
+}
