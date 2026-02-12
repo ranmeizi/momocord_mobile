@@ -1,6 +1,6 @@
 import { HTTPResponse, Page } from "puppeteer-core";
 import { getLastestTs, launchBrowser, sleep, } from "./utils";
-import * as axios from "axios";
+import axios from "axios";
 import * as dayjs from "dayjs";
 import * as utc from 'dayjs/plugin/utc';
 import * as timezone from 'dayjs/plugin/timezone';
@@ -114,7 +114,7 @@ async function capture() {
             // @ts-ignore
             const sendData = msgs.filter(item => item.note).map(item => item.note) as MomoDiscordMsg[]
             console.log('发送数据', sendData)
-            const res = await (axios as any).post('https://boboan.net/api/momoro/ingamenews/push', sendData)
+            const res = await axios.post('https://boboan.net/api/momoro/ingamenews/push', sendData)
 
             if (res.data.code === '000000') {
 
