@@ -4,6 +4,7 @@ import axios from "axios";
 import * as dayjs from "dayjs";
 import * as utc from 'dayjs/plugin/utc';
 import * as timezone from 'dayjs/plugin/timezone';
+import { io } from "socket.io-client";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -17,7 +18,7 @@ const dropReg = /<.+> (.+) got \[(.+)\]\(.+item_id=(\d+)&.+\)/;
 
 const stoleReg = /<.+> (.+) stole \[(.+)\]\(.+item_id=(\d+)&.+\)/;
 
-async function main() {
+async function capture() {
     const browser = await launchBrowser()
 
     const page = await browser.newPage();
@@ -285,6 +286,50 @@ async function getBodyJson(response: HTTPResponse) {
     }
 }
 
+let is_running = false;
+const MOMO_NEWS_ROOM = 'momo_news';
+async function main() {
+    // 起一个 socketio 客户端
+    const socket = io('https://boboan.net/momo_ws', {
+        transports: ['websocket'],
+        path: '/socket.io',
+    });
+    // const socket = io('http://localhost:3000/momo_ws', { transports: ['websocket'] });
 
+    console.log('启动');
+
+    //
+    socket.on('connect', async function () {
+        console.log('socketio 连接成功');
+
+        socket.on('disconnect', function () {
+            console.log('socketio 断开连接');
+        });
+
+        socket.on('MomonewsCaptureRequestEvent', async function (data) {
+            console.log('MomonewsCaptureRequestEvent', data)
+            // 执行
+            if (!is_running) {
+                try {
+                    is_running = true
+                    await capture()
+                }finally {
+                    is_running = false
+                }
+            }
+        });
+
+        socket.emit('message', {}, function (res) {
+            console.log('res', res)
+        });
+    })
+
+    socket.on('connect_error', function (err) {
+        console.log('connect_error 错误', err)
+    })
+    socket.on('error', function (err) {
+        console.log('socketio 错误', err)
+    })
+}
 
 main()
