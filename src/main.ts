@@ -136,16 +136,6 @@ async function capture() {
     // Remove the page's default timeout function
     await page.setDefaultNavigationTimeout(0);
 
-    // try {
-    //   await page.waitForNetworkIdle();
-    // } catch (e) {
-    //   console.log('这里超市了？', e);
-    //   await page.screenshot({
-    //     path: 'wait-error.png',
-    //     fullPage: false, // false: 当前视口，true: 完整页面
-    //     type: 'png', // png 或 jpeg
-    //   });
-    // }
     await sleep(5000);
 
     console.log('打开页面');
@@ -287,7 +277,6 @@ async function getBodyJson(response: HTTPResponse) {
 }
 
 let is_running = false;
-const MOMO_NEWS_ROOM = 'momo_news';
 async function main() {
     // 起一个 socketio 客户端
     const socket = io('https://boboan.net/momo_ws', {
@@ -302,27 +291,27 @@ async function main() {
     socket.on('connect', async function () {
         console.log('socketio 连接成功');
 
-        socket.on('disconnect', function () {
-            console.log('socketio 断开连接');
-        });
-
-        socket.on('MomonewsCaptureRequestEvent', async function (data) {
-            console.log('MomonewsCaptureRequestEvent', data)
-            // 执行
-            if (!is_running) {
-                try {
-                    is_running = true
-                    await capture()
-                }finally {
-                    is_running = false
-                }
-            }
-        });
-
         socket.emit('message', {}, function (res) {
             console.log('res', res)
         });
     })
+
+    socket.on('disconnect', function () {
+        console.log('socketio 断开连接');
+    });
+
+    socket.on('MomonewsCaptureRequestEvent', async function (data) {
+        console.log('MomonewsCaptureRequestEvent', data)
+        // 执行
+        if (!is_running) {
+            try {
+                is_running = true
+                await capture()
+            } finally {
+                is_running = false
+            }
+        }
+    });
 
     socket.on('connect_error', function (err) {
         console.log('connect_error 错误', err)
