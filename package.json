@@ -12,6 +12,7 @@
   "packageManager": "pnpm@10.27.0",
   "dependencies": {
     "axios": "^1.13.5",
+    "chalk": "^5.6.2",
     "dayjs": "^1.11.19",
     "puppeteer-core": "^24.37.2",
     "socket.io-client": "^4.8.3",

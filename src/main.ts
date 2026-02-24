@@ -5,6 +5,7 @@ import * as dayjs from "dayjs";
 import * as utc from 'dayjs/plugin/utc';
 import * as timezone from 'dayjs/plugin/timezone';
 import { io } from "socket.io-client";
+import { logger } from "./logger";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -17,6 +18,16 @@ const killReg = /<.+> (.+) executed \[(.+)\]\(.+mob_id=(\d+)&.+\) at (.+)/;
 const dropReg = /<.+> (.+) got \[(.+)\]\(.+item_id=(\d+)&.+\)/;
 
 const stoleReg = /<.+> (.+) stole \[(.+)\]\(.+item_id=(\d+)&.+\)/;
+
+function wrapCatchFunction(func: Function) {
+    return async function (...args: any[]) {
+        try {
+            return await func(...args);
+        } catch (error) {
+            logger.error(error);
+        }
+    };
+}
 
 async function capture() {
     const browser = await launchBrowser()
@@ -32,7 +43,7 @@ async function capture() {
     subscriber.on(
         'https://discord.com/api/v9/channels/1353165010582638713/messages',
 
-        async (response: any) => {
+        wrapCatchFunction(async (response: any) => {
             let data = await getBodyJson(response)
 
             if (!Array.isArray(data)) {
@@ -113,7 +124,7 @@ async function capture() {
             })
             // @ts-ignore
             const sendData = msgs.filter(item => item.note).map(item => item.note) as MomoDiscordMsg[]
-            console.log('发送数据', sendData)
+            logger.info('发送数据', sendData)
             const res = await axios.post('https://boboan.net/api/momoro/ingamenews/push', sendData)
 
             if (res.data.code === '000000') {
@@ -122,7 +133,7 @@ async function capture() {
                     return Math.min(prev, curr.utc)
                 }, sendData[0].utc)
             }
-        }
+        })
     );
 
     // 获取最新时间
@@ -144,18 +155,18 @@ async function capture() {
 
     try {
         await page.waitForSelector('div [data-jump-section="global"]');
-    } catch {
-        console.log('waitForSelector 错误了');
+    } catch (e) {
+        logger.error('waitForSelector 错误了');
+        throw e
+        // 终止
     }
 
     await sleep(2000);
 
-    console.log('最新时间:', ts, news_smallest_ts);
+    logger.info('最新时间:', ts, news_smallest_ts);
 
     while (!news_smallest_ts || ts < news_smallest_ts) {
-        console.log(
-            `滚动, 抓取的数据最早ts:${news_smallest_ts},本次启动数据库最新时间:${ts}`,
-        );
+        logger.info(`滚动, 抓取的数据最早ts:${news_smallest_ts},本次启动数据库最新时间:${ts}`);
         await scrollElement(page, `div [data-jump-section='global']`);
     }
 
@@ -271,7 +282,7 @@ async function getBodyJson(response: HTTPResponse) {
         // 如果以上都不匹配，返回 null
         return null;
     } catch (error) {
-        console.error('解析响应体为 JSON 时出错:', error);
+        logger.error('解析响应体为 JSON 时出错:', error);
         return null;
     }
 }
@@ -285,28 +296,24 @@ async function main() {
     });
     // const socket = io('http://localhost:3000/momo_ws', { transports: ['websocket'] });
 
-    console.log('启动');
+    logger.info('启动');
 
     //
     socket.on('connect', async function () {
-        console.log('socketio 连接成功');
-
-        socket.emit('message', {}, function (res) {
-            console.log('res', res)
-        });
+        logger.success('socketio 连接成功');
     })
 
     socket.on('disconnect', function () {
-        console.log('socketio 断开连接');
+        logger.warn('socketio 断开连接');
     });
 
     socket.on('MomonewsCaptureRequestEvent', async function (data) {
-        console.log('MomonewsCaptureRequestEvent', data)
+        logger.info('MomonewsCaptureRequestEvent', data)
         // 执行
         if (!is_running) {
             try {
                 is_running = true
-                await capture()
+                await wrapCatchFunction(capture)()
             } finally {
                 is_running = false
             }
@@ -314,10 +321,10 @@ async function main() {
     });
 
     socket.on('connect_error', function (err) {
-        console.log('connect_error 错误', err)
+        logger.error('connect_error 错误', err)
     })
     socket.on('error', function (err) {
-        console.log('socketio 错误', err)
+        logger.error('socketio 错误', err)
     })
 }
 
